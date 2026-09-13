@@ -2,7 +2,6 @@
  * notifications.ts — sole owner of the peer steer envelope.
  * Callers pass data only; customType + delivery options live here.
  */
-import { shortId } from "./paths.ts";
 
 export interface MinimalPi {
   sendMessage(
@@ -28,7 +27,9 @@ export function peerReplyHint(from: string, messageId: string): string {
 
 export function notifyPeerMessage(pi: MinimalPi, opts: PeerNotifyOpts): void {
   const verb = opts.kind === "reply" ? "replies" : "asks";
-  const content = `Peer ${shortId(opts.from)} ${verb}:\n\n${opts.text}`;
+  // Full sender id (not shortId): the reply hint that used to carry the full id
+  // is disabled, so the content itself must show where to reply.
+  const content = `Peer ${opts.from} ${verb}:\n\n${opts.text}`;
   // peerReplyHint disabled (user feedback: the appended "Reply with session_communicate(...)"
   // hint is noise — the model already knows the sender id from details.from).
   // To re-enable, append: + peerReplyHint(opts.from, opts.messageId)
