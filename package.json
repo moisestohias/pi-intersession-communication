@@ -8,7 +8,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "test": "node --test test/validators.test.ts test/transport.test.ts test/presence.test.ts test/config.test.ts test/watcher.test.ts test/commands.test.ts test/send.test.ts"
+    "test": "node --test test/validators.test.ts test/transport.test.ts test/presence.test.ts test/config.test.ts test/watcher.test.ts test/commands.test.ts test/send.test.ts test/renderers.test.ts"
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*",
