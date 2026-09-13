@@ -48,15 +48,15 @@ session_ask({ to_session_id: "<sender-id>", text: "Yes — merged.", in_reply_to
 |---|---|
 | `/peer whoami` | Print this session's full id |
 | `/peer list` | Peers + online/offline + mode |
-| `/peer allow [<id>]` | Allow a peer (prompts via dialog when omitted), saves to `config.json` |
-| `/peer block <id>` | Remove a peer, saves to `config.json` |
+| `/peer allow [<id>]` | Allow a peer (prompts via dialog when omitted), saved to this session's own peer list |
+| `/peer block <id>` | Remove a peer, saved to this session's own peer list |
 
 ## Config (`config.json`)
 
 | Key | Default | Description |
 |---|---|---|
 | `peer.enabled` | `true` | Master switch |
-| `peer.peers` | `[]` | Allowlist seed (both directions enforced) |
+| `peer.peers` | `[]` | Template allowlist for sessions that have never saved their own list (both directions enforced) |
 | `peer.mode` | `"notify"` | `"notify"` fire-and-forget, `"wait"` blocking |
 | `peer.poll_ms` | `1500` | Inbox + heartbeat tick |
 | `peer.wait_timeout_ms` | `120000` | `wait`-mode reply timeout |
@@ -81,5 +81,10 @@ warn-and-ignore. Timer/widget paths degrade to last-good config.
   rename-before-read claim, delete-on-read, each fires once).
 - `presence/<id>.json` — heartbeat rewritten every tick; missing/stale =
   offline error on send; deleted on `session_shutdown`.
+- `peerlists/<id>.json` — this session's allowlist (tied to session-id, not
+  to `config.json`, so sessions never clobber each other; kept on shutdown
+  so a resumed session inherits peers; swept 7 days after the owner goes
+  away). `peer.peers` in `config.json` only seeds sessions that have never
+  saved a list.
 - Reserved suffixes: `.msg-*.json`, `.pending-*`, `.consuming-*`,
   `.tmp-*`, `presence.json`. Never reuse them for other files.

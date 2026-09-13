@@ -1,14 +1,18 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, rmSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { handlePeerCommand } from "../pi-extension/peer/commands.ts";
-import { clearPeersForTest, listPeers } from "../pi-extension/peer/peers.ts";
+import {
+  clearPeersForTest,
+  listPeers,
+  loadPeerList,
+  savePeerList,
+  sweepStalePeerLists,
+  peerListFileFor,
+} from "../pi-extension/peer/peers.ts";
 import { peerSessions, stopPeerSession } from "../pi-extension/peer/watcher.ts";
-
-const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CONFIG_PATH = join(PKG_ROOT, "config.json");
 
 function cmdCtx(ownId: string, notes: any[], inputAnswer?: string) {
   return {
@@ -22,7 +26,10 @@ function cmdCtx(ownId: string, notes: any[], inputAnswer?: string) {
   } as any;
 }
 
+let base: string;
 beforeEach(() => {
+  base = mkdtempSync(join(tmpdir(), "peer-cmd-"));
+  process.env.PI_PEER_INBOX_DIR = base;
   clearPeersForTest();
 });
 
@@ -33,8 +40,9 @@ afterEach(() => {
     } catch {}
   }
   clearPeersForTest();
+  delete process.env.PI_PEER_INBOX_DIR;
   try {
-    if (existsSync(CONFIG_PATH)) rmSync(CONFIG_PATH, { force: true });
+    rmSync(base, { recursive: true, force: true });
   } catch {}
 });
 
@@ -45,12 +53,14 @@ describe("/peer command", () => {
     assert.match(notes[0].msg, /sess-AAAA/);
   });
 
-  it("allow adds + persists, list shows, block removes", async () => {
+  it("allow adds + persists per-session, list shows, block removes", async () => {
     const notes: any[] = [];
     const ctx = cmdCtx("sess-AAAA", notes);
     await handlePeerCommand("allow sess-BBBB", ctx);
     assert.deepEqual(listPeers("sess-AAAA"), ["sess-BBBB"]);
-    assert.equal(existsSync(CONFIG_PATH), true);
+    // Persisted under the session's own file — never config.json
+    assert.equal(existsSync(peerListFileFor(base, "sess-AAAA")), true);
+    assert.deepEqual(loadPeerList(base, "sess-AAAA"), ["sess-BBBB"]);
 
     await handlePeerCommand("list", ctx);
     assert.match(notes[notes.length - 1].msg, /sess-BBBB/);
@@ -60,6 +70,15 @@ describe("/peer command", () => {
 
     await handlePeerCommand("block sess-BBBB", ctx);
     assert.deepEqual(listPeers("sess-AAAA"), []);
+    assert.deepEqual(loadPeerList(base, "sess-AAAA"), []);
+  });
+
+  it("lists are isolated per session", async () => {
+    const notes: any[] = [];
+    await handlePeerCommand("allow sess-BBBB", cmdCtx("sess-AAAA", notes));
+    await handlePeerCommand("allow sess-CCCC", cmdCtx("sess-DDDD", notes));
+    assert.deepEqual(listPeers("sess-AAAA"), ["sess-BBBB"]);
+    assert.deepEqual(listPeers("sess-DDDD"), ["sess-CCCC"]);
   });
 
   it("allow with no id uses the input dialog", async () => {
@@ -81,5 +100,29 @@ describe("/peer command", () => {
     const notes: any[] = [];
     await handlePeerCommand("frobnicate", cmdCtx("sess-AAAA", notes));
     assert.match(notes[0].msg, /Usage/);
+  });
+});
+
+describe("peer list persistence", () => {
+  it("missing file returns null (caller seeds from config)", () => {
+    assert.equal(loadPeerList(base, "sess-NONE", ), null);
+  });
+  it("round-trips and validates", () => {
+    assert.equal(savePeerList(base, "sess-AAAA", ["sess-BBBB"]), null);
+    assert.deepEqual(loadPeerList(base, "sess-AAAA"), ["sess-BBBB"]);
+  });
+  it("corrupt file is backed up, loads as empty", () => {
+    assert.equal(savePeerList(base, "sess-AAAA", ["sess-BBBB"]), null);
+    writeFileSync(peerListFileFor(base, "sess-AAAA"), "{broken", "utf8");
+    assert.deepEqual(loadPeerList(base, "sess-AAAA"), []);
+  });
+  it("sweep removes only old lists without live presence", () => {
+    assert.equal(savePeerList(base, "sess-AAAA", []), null);
+    assert.equal(savePeerList(base, "sess-BBBB", []), null);
+    // sess-AAAA "alive", sess-BBBB not, but both are fresh → nothing swept
+    assert.equal(sweepStalePeerLists(base, (id) => id === "sess-AAAA", 60_000), 0);
+    // maxAge 0 with dead presence → swept
+    assert.equal(sweepStalePeerLists(base, () => false, -1), 2);
+    assert.equal(existsSync(peerListFileFor(base, "sess-AAAA")), false);
   });
 });

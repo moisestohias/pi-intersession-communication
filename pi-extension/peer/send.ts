@@ -8,7 +8,7 @@ import { getPeerConfig } from "./config.ts";
 import { validateSendParams } from "./validators.ts";
 import { buildPeerMessage, writePeerMessage } from "./transport.ts";
 import { checkOnline, offlineErrorText } from "./presence.ts";
-import { listPeers, seedPeers } from "./peers.ts";
+import { listPeers, loadPeerList, seedPeers } from "./peers.ts";
 import { peerSessions, registerWaiter, unregisterWaiter, startPeerSession } from "./watcher.ts";
 import type { PeerMessage } from "./transport.ts";
 
@@ -50,7 +50,15 @@ export async function executeSessionAsk(
   const ownId = ownIdOf(ctx);
   if (!ownId) return toolError("Could not determine this session's id.", "no session id");
 
-  seedPeers(ownId, cfg.peers);
+  // Session-scoped list (persisted file wins; config is only the template).
+  // seedPeers is no-op when the watcher already seeded this session.
+  let seed: string[] | null = null;
+  try {
+    seed = loadPeerList(getPeerBaseDir(), ownId);
+  } catch {
+    seed = null;
+  }
+  seedPeers(ownId, seed ?? cfg.peers);
   const gate = validateSendParams(params, { ownId, peers: listPeers(ownId), enabled: cfg.enabled });
   if (!gate.ok) return toolError(gate.text, (gate.details as any).error);
 

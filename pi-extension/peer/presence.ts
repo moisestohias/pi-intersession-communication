@@ -55,6 +55,16 @@ export function checkOnline(base: string, targetId: string, ttlMs: number): Onli
   return { online: true };
 }
 
+/** Freshness probe without side effects (for GC: never unlinks). */
+export function checkPeerPresenceAlive(base: string, sessionId: string, ttlMs: number): boolean {
+  try {
+    const hb = readHeartbeat(presenceFileFor(base, sessionId));
+    return !!hb && Date.now() - hb.hb <= ttlMs;
+  } catch {
+    return true; // on error assume alive — never GC blindly
+  }
+}
+
 /** Periodic GC for crash residue (killed sessions never ran shutdown). */
 export function sweepStalePresence(base: string, ttlMs: number, graceMult = 4): number {
   let removed = 0;

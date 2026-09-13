@@ -18,8 +18,8 @@ import {
   promotePendingPeerFile,
   type PeerMessage,
 } from "./transport.ts";
-import { ensurePeerDirs, removeHeartbeat, sweepStalePresence, writeHeartbeat } from "./presence.ts";
-import { seedPeers, listPeers, forgetPeers } from "./peers.ts";
+import { checkPeerPresenceAlive, ensurePeerDirs, removeHeartbeat, sweepStalePresence, writeHeartbeat } from "./presence.ts";
+import { loadPeerList, savePeerList, seedPeers, listPeers, forgetPeers, sweepStalePeerLists } from "./peers.ts";
 import { shouldAcceptFrom } from "./validators.ts";
 import { notifyPeerMessage } from "./notifications.ts";
 import { renderPeerWidgetLines } from "./widget.ts";
@@ -119,13 +119,26 @@ export function startPeerSession(pi: ExtensionAPI, ctx: ExtensionContext): void 
   if (!ownId) return;
   const id: string = ownId;
 
-  let cfgPeers: string[] = [];
+  const base = getPeerBaseDir();
+  // Session-scoped list: persisted file wins; config.json is only the
+  // template for a session that has never saved one.
+  let seed: string[] | null = null;
   try {
-    cfgPeers = getPeerConfig().peers;
+    seed = loadPeerList(base, id);
   } catch {
-    cfgPeers = getSafePeerConfig().peers;
+    seed = null;
   }
-  seedPeers(id, cfgPeers);
+  if (seed === null) {
+    try {
+      seed = getPeerConfig().peers;
+    } catch {
+      seed = getSafePeerConfig().peers;
+    }
+    try {
+      savePeerList(base, id, seed);
+    } catch {}
+  }
+  seedPeers(id, seed);
 
   const existing = peerSessions.get(id);
   if (existing) {
@@ -135,7 +148,6 @@ export function startPeerSession(pi: ExtensionAPI, ctx: ExtensionContext): void 
     return;
   }
 
-  const base = getPeerBaseDir();
   try {
     ensurePeerDirs(base, id);
   } catch {}
@@ -268,6 +280,15 @@ function tick(state: SessionPeerState): void {
   if (state.tickCount % 10 === 0) {
     try {
       sweepStalePresence(base, cfg.presence_ttl_ms);
+    } catch {}
+    try {
+      sweepStalePeerLists(base, (peerId) => {
+        try {
+          return checkPeerPresenceAlive(base, peerId, cfg.presence_ttl_ms);
+        } catch {
+          return true; // on error keep the file — never GC blindly
+        }
+      });
     } catch {}
   }
 

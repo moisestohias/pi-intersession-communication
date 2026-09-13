@@ -11,7 +11,7 @@ import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { getPeerBaseDir } from "./paths.ts";
 import { getPeerConfig, getSafePeerConfig } from "./config.ts";
 import { validatePeerIdInput } from "./validators.ts";
-import { addPeer, listPeers, persistPeers, removePeer, seedPeers } from "./peers.ts";
+import { addPeer, listPeers, loadPeerList, removePeer, savePeerList, seedPeers } from "./peers.ts";
 import { checkOnline } from "./presence.ts";
 import { peerSessions } from "./watcher.ts";
 
@@ -24,12 +24,26 @@ function ownIdOf(ctx: ExtensionCommandContext): string | null {
   }
 }
 
-function seedFromConfig(ownId: string): void {
+function seedForCommand(ownId: string): void {
+  const base = getPeerBaseDir();
+  let seed: string[] | null = null;
   try {
-    seedPeers(ownId, getPeerConfig().peers);
+    seed = loadPeerList(base, ownId);
   } catch {
-    seedPeers(ownId, getSafePeerConfig().peers);
+    seed = null;
   }
+  if (seed === null) {
+    try {
+      seed = getPeerConfig().peers;
+    } catch {
+      seed = getSafePeerConfig().peers;
+    }
+  }
+  seedPeers(ownId, seed);
+}
+
+function saveForCommand(ownId: string): string | null {
+  return savePeerList(getPeerBaseDir(), ownId, listPeers(ownId));
 }
 
 export async function handlePeerCommand(args: string, ctx: ExtensionCommandContext): Promise<void> {
@@ -43,7 +57,7 @@ export async function handlePeerCommand(args: string, ctx: ExtensionCommandConte
     notify("Could not determine this session's id.", "error");
     return;
   }
-  seedFromConfig(ownId);
+  seedForCommand(ownId);
 
   const parts = args.trim().split(/\s+/).filter(Boolean);
   const sub = (parts[0] ?? "help").toLowerCase();
@@ -96,15 +110,14 @@ export async function handlePeerCommand(args: string, ctx: ExtensionCommandConte
       return;
     }
     const added = addPeer(ownId, checked.id);
-    const peers = listPeers(ownId);
-    const persistErr = persistPeers(peers);
+    const persistErr = saveForCommand(ownId);
     // Nudge the widget now (next tick refreshes anyway).
     try {
       peerSessions.get(ownId) && (peerSessions.get(ownId)!.lastWidgetSig = "");
     } catch {}
     notify(
       added
-        ? `Allowed peer ${checked.id}.${persistErr ? ` (warning: ${persistErr})` : " Saved to config.json."}`
+        ? `Allowed peer ${checked.id}.${persistErr ? ` (warning: ${persistErr})` : " Saved to this session's peer list."}`
         : `Peer ${checked.id} was already allowed.${persistErr ? ` (warning: ${persistErr})` : ""}`,
       "info",
     );
@@ -122,13 +135,13 @@ export async function handlePeerCommand(args: string, ctx: ExtensionCommandConte
       return;
     }
     const removed = removePeer(ownId, checked.id);
-    const persistErr = persistPeers(listPeers(ownId));
+    const persistErr = saveForCommand(ownId);
     try {
       peerSessions.get(ownId) && (peerSessions.get(ownId)!.lastWidgetSig = "");
     } catch {}
     notify(
       removed
-        ? `Blocked peer ${checked.id}.${persistErr ? ` (warning: ${persistErr})` : " Saved to config.json."}`
+        ? `Blocked peer ${checked.id}.${persistErr ? ` (warning: ${persistErr})` : " Saved to this session's peer list."}`
         : `Peer ${checked.id} was not in the allowlist.`,
       "info",
     );
