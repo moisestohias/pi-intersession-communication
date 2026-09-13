@@ -1,5 +1,5 @@
 /**
- * send.ts — `session_ask` tool execute (thin; pure gates in validators.ts).
+ * send.ts — `session_communicate` tool execute (thin; pure gates in validators.ts).
  */
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
@@ -12,7 +12,7 @@ import { listPeers, loadPeerList, seedPeers } from "./peers.ts";
 import { peerSessions, registerWaiter, unregisterWaiter, startPeerSession } from "./watcher.ts";
 import type { PeerMessage } from "./transport.ts";
 
-export const SessionAskParams = Type.Object({
+export const SessionCommunicateParams = Type.Object({
   to_session_id: Type.String({ description: "Target Pi session-id to message (must be in your peers allowlist and online)." }),
   text: Type.String({ description: "Message text (1-4000 chars). The sender session-id is attached automatically." }),
   in_reply_to: Type.Optional(Type.String({ description: "Message id being replied to (threading)." })),
@@ -31,7 +31,7 @@ function ownIdOf(ctx: ExtensionContext): string | null {
   }
 }
 
-export async function executeSessionAsk(
+export async function executeSessionCommunicate(
   pi: any,
   params: { to_session_id?: unknown; text?: unknown; in_reply_to?: unknown },
   signal: AbortSignal | undefined,

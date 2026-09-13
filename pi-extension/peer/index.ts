@@ -4,10 +4,10 @@
  * All policy lives in its home module (see README).
  */
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { SessionAskParams, executeSessionAsk } from "./send.ts";
+import { SessionCommunicateParams, executeSessionCommunicate } from "./send.ts";
 import { handlePeerCommand } from "./commands.ts";
 import { startPeerSession, stopPeerSession } from "./watcher.ts";
-import { renderPeerMessage, renderSessionAskCall, renderSessionAskResult } from "./renderers.ts";
+import { renderPeerMessage, renderSessionCommunicateCall, renderSessionCommunicateResult } from "./renderers.ts";
 
 export default function peerExtension(pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
@@ -23,27 +23,27 @@ export default function peerExtension(pi: ExtensionAPI) {
   });
 
   pi.registerTool({
-    name: "session_ask",
+    name: "session_communicate",
     label: "Message Peer Session",
     description:
       "Send a message to another Pi session by session-id. " +
       "The target must be in your peers allowlist (see /peer allow) and online — offline targets are an immediate error, never queued. " +
-      "Your own session-id is attached automatically so the peer can reply with session_ask. " +
+      "Your own session-id is attached automatically so the peer can reply with session_communicate. " +
       "In notify mode (default) the call returns once delivered and the reply arrives later as a new turn; in wait mode (peer.mode=wait in config.json) it blocks until the peer replies or the timeout hits. " +
       "Do not poll after sending — the reply wakes you automatically.",
     promptSnippet:
-      "Send a message to a peer Pi session: session_ask({ to_session_id, text, in_reply_to? }). Target must be allowed (/peer allow) and online.",
-    parameters: SessionAskParams,
+      "Send a message to a peer Pi session: session_communicate({ to_session_id, text, in_reply_to? }). Target must be allowed (/peer allow) and online.",
+    parameters: SessionCommunicateParams,
     async execute(toolCallId, params, signal, _onUpdate, ctx) {
       void toolCallId;
-      return executeSessionAsk(pi, params as any, signal as any, ctx as any) as any;
+      return executeSessionCommunicate(pi, params as any, signal as any, ctx as any) as any;
     },
-    renderCall: renderSessionAskCall as any,
-    renderResult: renderSessionAskResult as any,
+    renderCall: renderSessionCommunicateCall as any,
+    renderResult: renderSessionCommunicateResult as any,
   });
 
   pi.registerCommand("peer", {
-    description: "Manage peer sessions: /peer whoami | list | allow [<id>] | block <id>",
+    description: "Manage peer sessions: /peer whoami | list | allow [<id>] | drop <id>",
     handler: async (args, ctx) => {
       await handlePeerCommand(args, ctx as any);
     },

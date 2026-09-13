@@ -69,7 +69,7 @@ export function forgetPeers(ownId: string): void {
 /**
  * Load a session's persisted list. Returns null when no file exists
  * (caller seeds from config template), otherwise the validated list
- * (possibly empty after block-all). Corrupt files are backed up as
+ * (possibly empty after drop-all). Corrupt files are backed up as
  * `.corrupt-<ts>` evidence and treated as empty — never thrown.
  */
 export function loadPeerList(base: string, ownId: string): string[] | null {

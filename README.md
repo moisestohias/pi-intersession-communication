@@ -25,7 +25,7 @@ There is no auto-discovery. Exchange ids by hand:
 ## Use
 
 ```typescript
-session_ask({ to_session_id: "abc123", text: "Is the auth module ready?" });
+session_communicate({ to_session_id: "abc123", text: "Is the auth module ready?" });
 ```
 
 - Your own session-id is attached automatically.
@@ -39,7 +39,7 @@ Reply to a received message with the sender's id (shown in the
 notification):
 
 ```typescript
-session_ask({ to_session_id: "<sender-id>", text: "Yes — merged.", in_reply_to: "<message-id>" });
+session_communicate({ to_session_id: "<sender-id>", text: "Yes — merged.", in_reply_to: "<message-id>" });
 ```
 
 ## Commands
@@ -49,7 +49,7 @@ session_ask({ to_session_id: "<sender-id>", text: "Yes — merged.", in_reply_to
 | `/peer whoami` | Print this session's full id |
 | `/peer list` | Peers + online/offline + mode |
 | `/peer allow [<id>]` | Allow a peer (prompts via dialog when omitted), saved to this session's own peer list |
-| `/peer block <id>` | Remove a peer, saved to this session's own peer list |
+| `/peer drop <id>` | Remove a peer, saved to this session's own peer list |
 
 ## Config (`config.json`)
 

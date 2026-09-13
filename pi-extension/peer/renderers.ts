@@ -5,22 +5,22 @@
 import { Text } from "@mariozechner/pi-tui";
 import { shortId } from "./paths.ts";
 
-export function renderSessionAskCall(args: any, theme: any) {
+export function renderSessionCommunicateCall(args: any, theme: any) {
   const to = typeof (args as any)?.to_session_id === "string" ? (args as any).to_session_id : "?";
   const text = typeof (args as any)?.text === "string" ? (args as any).text : "";
   const firstLine = text.split("\n").find((l: string) => l.trim()) ?? "";
   const preview = firstLine.length > 100 ? firstLine.slice(0, 100) + "…" : firstLine;
-  let out = "○ " + theme.fg("toolTitle", theme.bold("session_ask")) + theme.fg("dim", ` → ${shortId(to)}`);
+  let out = "○ " + theme.fg("toolTitle", theme.bold("session_communicate")) + theme.fg("dim", ` → ${shortId(to)}`);
   if (preview) out += "\n" + theme.fg("toolOutput", preview);
   return new Text(out, 0, 0);
 }
 
-export function renderSessionAskResult(result: any, _opts: any, theme: any) {
+export function renderSessionCommunicateResult(result: any, _opts: any, theme: any) {
   const details = (result as any)?.details as any;
   const text = typeof (result as any)?.content?.[0]?.text === "string" ? (result as any).content[0].text : "";
   if (details?.delivered) {
     return new Text(
-      theme.fg("accent", "⟳") + " " + theme.fg("toolTitle", theme.bold("session_ask")) + theme.fg("dim", ` — sent to ${shortId(details.to ?? "?")}`),
+      theme.fg("accent", "⟳") + " " + theme.fg("toolTitle", theme.bold("session_communicate")) + theme.fg("dim", ` — sent to ${shortId(details.to ?? "?")}`),
       0,
       0,
     );

@@ -5,7 +5,7 @@
  *   /peer whoami          — print this session's full id (copy to the other side)
  *   /peer list            — peers + online/offline per peer + mode
  *   /peer allow [<id>]    — no id → input dialog; validates, adds, persists
- *   /peer block <id>      — removes, persists
+ *   /peer drop <id>       — removes, persists
  */
 import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { getPeerBaseDir } from "./paths.ts";
@@ -124,9 +124,9 @@ export async function handlePeerCommand(args: string, ctx: ExtensionCommandConte
     return;
   }
 
-  if (sub === "block") {
+  if (sub === "drop") {
     if (!rest) {
-      notify("Usage: /peer block <session-id>", "warning");
+      notify("Usage: /peer drop <session-id>", "warning");
       return;
     }
     const checked = validatePeerIdInput(rest);
@@ -141,12 +141,12 @@ export async function handlePeerCommand(args: string, ctx: ExtensionCommandConte
     } catch {}
     notify(
       removed
-        ? `Blocked peer ${checked.id}.${persistErr ? ` (warning: ${persistErr})` : " Saved to this session's peer list."}`
+        ? `Dropped peer ${checked.id}.${persistErr ? ` (warning: ${persistErr})` : " Saved to this session's peer list."}`
         : `Peer ${checked.id} was not in the allowlist.`,
       "info",
     );
     return;
   }
 
-  notify("Usage: /peer whoami | /peer list | /peer allow [<session-id>] | /peer block <session-id>", "warning");
+  notify("Usage: /peer whoami | /peer list | /peer allow [<session-id>] | /peer drop <session-id>", "warning");
 }

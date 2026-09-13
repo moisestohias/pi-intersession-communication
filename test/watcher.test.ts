@@ -64,7 +64,10 @@ describe("watcher", () => {
     assert.equal(sent[0].msg.customType, "peer_message");
     assert.equal(sent[0].opts.triggerTurn, true);
     assert.match(sent[0].msg.content, /sess-BBBB/);
-    assert.match(sent[0].msg.content, /session_ask/);
+    // peerReplyHint is disabled: no reply-hint appendix; routing ids stay in details
+    assert.doesNotMatch(sent[0].msg.content, /Reply with session_communicate/);
+    assert.equal(sent[0].msg.details.from, "sess-BBBB");
+    assert.ok(sent[0].msg.details.messageId);
     // Second tick: no double delivery
     tickForTest("sess-AAAA");
     assert.equal(sent.length, 1);

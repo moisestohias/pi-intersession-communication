@@ -53,7 +53,7 @@ describe("/peer command", () => {
     assert.match(notes[0].msg, /sess-AAAA/);
   });
 
-  it("allow adds + persists per-session, list shows, block removes", async () => {
+  it("allow adds + persists per-session, list shows, drop removes", async () => {
     const notes: any[] = [];
     const ctx = cmdCtx("sess-AAAA", notes);
     await handlePeerCommand("allow sess-BBBB", ctx);
@@ -68,7 +68,7 @@ describe("/peer command", () => {
     await handlePeerCommand("allow sess-BBBB", ctx);
     assert.match(notes[notes.length - 1].msg, /already allowed/);
 
-    await handlePeerCommand("block sess-BBBB", ctx);
+    await handlePeerCommand("drop sess-BBBB", ctx);
     assert.deepEqual(listPeers("sess-AAAA"), []);
     assert.deepEqual(loadPeerList(base, "sess-AAAA"), []);
   });
