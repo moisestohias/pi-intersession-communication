@@ -1,0 +1,41 @@
+/**
+ * renderers.ts — presentation only. Wording for content lives in
+ * notifications.ts / send paths; this file owns layout.
+ */
+import { Text } from "@mariozechner/pi-tui";
+import { shortId } from "./paths.ts";
+
+export function renderSessionAskCall(args: any, theme: any) {
+  const to = typeof (args as any)?.to_session_id === "string" ? (args as any).to_session_id : "?";
+  const text = typeof (args as any)?.text === "string" ? (args as any).text : "";
+  const firstLine = text.split("\n").find((l: string) => l.trim()) ?? "";
+  const preview = firstLine.length > 100 ? firstLine.slice(0, 100) + "…" : firstLine;
+  let out = "○ " + theme.fg("toolTitle", theme.bold("session_ask")) + theme.fg("dim", ` → ${shortId(to)}`);
+  if (preview) out += "\n" + theme.fg("toolOutput", preview);
+  return new Text(out, 0, 0);
+}
+
+export function renderSessionAskResult(result: any, _opts: any, theme: any) {
+  const details = (result as any)?.details as any;
+  const text = typeof (result as any)?.content?.[0]?.text === "string" ? (result as any).content[0].text : "";
+  if (details?.delivered) {
+    return new Text(
+      theme.fg("accent", "⟳") + " " + theme.fg("toolTitle", theme.bold("session_ask")) + theme.fg("dim", ` — sent to ${shortId(details.to ?? "?")}`),
+      0,
+      0,
+    );
+  }
+  if (details?.answered) {
+    return new Text(theme.fg("toolTitle", theme.bold("peer reply")) + "\n" + theme.fg("toolOutput", text), 0, 0);
+  }
+  return new Text(theme.fg("dim", text || "(no output)"), 0, 0);
+}
+
+export function renderPeerMessage(message: any, _options: any, theme: any) {
+  const details = (message as any)?.details as any;
+  const from = typeof details?.from === "string" ? details.from : "unknown peer";
+  const text = typeof details?.text === "string" && details.text ? details.text : String((message as any)?.content ?? "");
+  const kind = details?.kind === "reply" ? "replies" : "asks";
+  const header = theme.fg("toolTitle", theme.bold(`Peer ${shortId(from)} ${kind}`));
+  return new Text(`${header}\n${text}`, 0, 0);
+}

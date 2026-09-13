@@ -1,0 +1,10 @@
+{
+  "peer": {
+    "enabled": true,
+    "peers": [],
+    "mode": "notify",
+    "poll_ms": 1500,
+    "wait_timeout_ms": 120000,
+    "presence_ttl_ms": 10000
+  }
+}
